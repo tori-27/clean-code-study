@@ -5,17 +5,34 @@ import { GameTitle } from "./ui/game-title";
 import { PLAYERS } from "./constants";
 import { PlayerInfo } from "./ui/player-info";
 import { GameMoveInfo } from "./ui/game-move-info";
-import { useGameState } from "./model/use-game-state";
 import { GameCell } from "./ui/game-cell";
 import { GameOverModal } from "./ui/game-over-modal";
+import { initGameState } from "./model/game-state-reducer";
+import { computeWinnerSymbol } from "./model/compute-winner-symbol";
+import { getNextMove } from "./model/get-next-move";
+import { computeWinner } from "./model/compute-winner";
+import { GAME_STATE_ACTIONS, gameStateReducer } from "./model/game-state-reducer";
+import { useReducer } from "react";
 
 const PLAYERS_COUNT=2
 
 export function Game(){
+    const [gameState, dispatch] = useReducer(
+        gameStateReducer,
+        { playersCount: PLAYERS_COUNT },
+        initGameState,
+    );
 
-    const {cells, currentMove, nextMove, handleCellClick, winnerSequence, winnerSymbol} = useGameState(PLAYERS_COUNT)
+    const winnerSequence = computeWinner(gameState.cells);
+    const nextMove = getNextMove(
+        gameState.currentMove,
+        gameState.playersCount,
+        gameState.playersTimeOver,
+    );
+    const winnerSymbol = computeWinnerSymbol(gameState, {winnerSequence, nextMove})
 
     const winnerPlayer = PLAYERS.find(player => player.symbol === winnerSymbol)
+
 
     return (
         <>
@@ -38,12 +55,18 @@ export function Game(){
                         />
                     ))
                 }
-                gameMoveInfo={<GameMoveInfo currentMove={currentMove} nextMove={nextMove}/>}
-                gameCells={cells.map((cell, index) => (
+                gameMoveInfo={<GameMoveInfo currentMove={gameState.currentMove} nextMove={nextMove}/>}
+                gameCells={gameState.cells.map((cell, index) => (
                     <GameCell 
                         key={index}
                         disabled={!!winnerSymbol}
-                        onClick={() => {handleCellClick(index)}}
+                        onClick={() => {
+                            dispatch({
+                                type: GAME_STATE_ACTIONS.CELL_CLICK,
+                                index,
+
+                            })
+                        }}
                         isWinner={winnerSequence?.includes(index)}
                         symbol={cell}
                     />))}
